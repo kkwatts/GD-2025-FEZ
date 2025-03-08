@@ -3,6 +3,8 @@ using UnityEngine;
 public class PlayerAnimation : MonoBehaviour {
     Animator anim;
 
+    public bool paused;
+
     public float idleTimerMin;
     public float idleTimerMax;
 
@@ -20,6 +22,10 @@ public class PlayerAnimation : MonoBehaviour {
         idleTimer = 0f;
         idleActionThreshold = Random.Range(idleTimerMin, idleTimerMax);
         idleAction = 0;
+
+        if (paused) {
+            isIdle = false;
+        }
     }
 
     // Update is called once per frame
