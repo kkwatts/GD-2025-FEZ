@@ -30,6 +30,8 @@ public class PlayerAnimation : MonoBehaviour {
 
     // Update is called once per frame
     void Update() {
+        transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+
         // Idle Animations
         if (isIdle) {
             anim.SetBool("Idle", true);

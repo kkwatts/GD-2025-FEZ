@@ -82,7 +82,7 @@ public class PlayerMovement : MonoBehaviour {
         }
 
         // Jumping
-        if (Input.GetKeyDown(jump) && (isGrounded || (coyoteTimer <= coyoteTimeLimit && !isGrounded))) {
+        if (Input.GetKeyDown(jump) && (isGrounded || (coyoteTimer <= coyoteTimeLimit && rb.linearVelocity.y < 0f))) {
             jumpForce = jumpHeight;
             coyoteTimer = 0f;
             isGrounded = false;
