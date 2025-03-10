@@ -5,157 +5,123 @@ public class PlayerMovement : MonoBehaviour {
     private KeyCode moveRight = KeyCode.RightArrow;
     private KeyCode jump = KeyCode.Space;
 
-    private Rigidbody rb;
-    private LayerMask groundLayer;
-    private BoxCollider col;
-
-    public Vector3 gravity;
+    public float gravity;
     public float accelSpeed;
-    public float friction;
     public float speedLimit;
+    public float friction;
     public float turnTimeLimit;
-    public float detectWallDistance;
-    public float detectFloorDistance;
-    public float detectCeilingDistance;
     public float jumpHeight;
+    public float jumpDecay;
     public float coyoteTimeLimit;
 
+    private CharacterController controller;
+
+    private float fallSpeed;
     private float xVel;
-    private float moveLeftTimer;
-    private float moveRightTimer;
-    public float coyoteTimer;
+    private float turnTimer;
+    private float coyoteTimer;
     private float jumpForce;
-    private bool isGrounded;
-    private bool isJumping;
+    private bool canTurn;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start() {
-        rb = GetComponent<Rigidbody>();
-        groundLayer = LayerMask.GetMask("Ground");
-        col = GetComponent<BoxCollider>();
+        controller = GetComponent<CharacterController>();
 
-        xVel = 0f;
-        moveLeftTimer = 0f;
-        moveRightTimer = 0f;
-        coyoteTimer = coyoteTimeLimit + 1f;
-        isJumping = false;
+        fallSpeed = 0f;
+        jumpForce = 0f;
+        turnTimer = 0f;
+        canTurn = true;
     }
 
     // Update is called once per frame
     void Update() {
-        Physics.gravity = gravity;
+        Fall();
+        Movement();
+        Jump();
 
-        // X Movement
-        if (Input.GetKey(moveLeft) && !Input.GetKey(moveRight) && moveRightTimer <= 0f) {
-            xVel -= accelSpeed;
-            moveLeftTimer = turnTimeLimit;
-        }
-        else if (Input.GetKey(moveRight) && !Input.GetKey(moveLeft) && moveLeftTimer <= 0f) {
-            xVel += accelSpeed;
-            moveRightTimer = turnTimeLimit;
+        controller.Move(new Vector3(xVel, fallSpeed + jumpForce, 0f) * Time.deltaTime);
+    }
+
+    // Apply gravity
+    private void Fall() {
+        if (!controller.isGrounded) {
+            fallSpeed -= gravity * Time.deltaTime;
+            coyoteTimer += Time.deltaTime;
         }
         else {
-            xVel *= friction;
-            moveLeftTimer -= Time.deltaTime;
-            moveRightTimer -= Time.deltaTime;
+            fallSpeed = -1f;
+            jumpForce = 0f;
+            coyoteTimer = 0f;
+        }
+    }
 
-            if (xVel == 0f) {
-                moveLeftTimer = 0f;
-                moveRightTimer = 0f;
+    // X movement
+    private void Movement() {
+        if (Input.GetKey(moveLeft) && !Input.GetKey(moveRight)) {
+            xVel -= accelSpeed * Time.deltaTime;
+            canTurn = true;
+            turnTimer = 0f;
+            if (Mathf.Abs(xVel) >= speedLimit || (xVel >= speedLimit / 2f && controller.isGrounded)) {
+                xVel = -speedLimit;
+            }
+        }
+        else if (Input.GetKey(moveRight) && !Input.GetKey(moveLeft)) {
+            xVel += accelSpeed * Time.deltaTime;
+            canTurn = true;
+            turnTimer = 0f;
+            if (xVel >= speedLimit || (xVel <= speedLimit / -2f && controller.isGrounded)) {
+                xVel = speedLimit;
+            }
+        }
+        else if (Input.GetKey(moveLeft) && Input.GetKey(moveRight) && canTurn && controller.isGrounded) {
+            canTurn = false;
+            if (xVel < 0f) {
+                xVel = speedLimit;
+            }
+            else if (xVel > 0f) {
+                xVel = -speedLimit;
+            }
+        }
+        else {
+            xVel *= friction * (1 - Time.deltaTime);
+
+            if (!canTurn && turnTimer <= turnTimeLimit) {
+                xVel = Mathf.Sign(xVel) * speedLimit;
+            }
+            if (Mathf.Abs(xVel) <= 0.001f) {
+                xVel = 0;
+            }
+            if (!canTurn) {
+                turnTimer += Time.deltaTime;
+            }
+            else {
+                turnTimer = 0f;
             }
         }
 
-        if (Mathf.Abs(xVel) >= speedLimit) {
-            xVel = Mathf.Sign(xVel) * speedLimit;
-        }
-        else if (Mathf.Abs(xVel) < 0.001f) {
+        if (controller.velocity.x == 0f && Mathf.Abs(xVel) == speedLimit) {
             xVel = 0f;
         }
+    }
 
-        // Coyote Time
-        if (rb.linearVelocity.y != 0f) {
-            coyoteTimer += Time.deltaTime;
-        }
-        else if (isGrounded) {
-            coyoteTimer = 0f;
-            jumpForce = 0f;
-        }
-
-        // Jumping
-        if (Input.GetKeyDown(jump) && (isGrounded || (coyoteTimer <= coyoteTimeLimit && rb.linearVelocity.y < 0f))) {
+    // Jump mechanics
+    private void Jump() { 
+        if (Input.GetKeyDown(jump) && (controller.isGrounded || coyoteTimer <= coyoteTimeLimit)) {
             jumpForce = jumpHeight;
-            coyoteTimer = 0f;
-            isGrounded = false;
-            isJumping = true;
-            rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
+            coyoteTimer = coyoteTimeLimit + 1f;
         }
-
         if (jumpForce > 0f) {
-            jumpForce -= Time.deltaTime;
-            CheckForCeiling();
-        }
-        else if (jumpForce < 0f) {
-            jumpForce = 0f;
-        }
-
-        CheckForCeiling();
-    }
-    
-    private void FixedUpdate() {
-        // Wall Collision
-        RaycastHit hit;
-
-        if (xVel > 0f && Physics.Raycast(transform.position, Vector3.right, out hit, detectWallDistance, groundLayer)) {
-            Debug.DrawRay(transform.position, Vector3.right * detectWallDistance, Color.red);
-            xVel = 0f;
-        }
-        else if (xVel < 0f && Physics.Raycast(transform.position, Vector3.left, out hit, detectWallDistance, groundLayer)) {
-            Debug.DrawRay(transform.position, Vector3.left * detectWallDistance, Color.red);
-            xVel = 0f;
-        }
-
-        // Move Rigidbody
-        rb.MovePosition(transform.position + new Vector3(xVel, jumpForce, 0f) * Time.fixedDeltaTime);
-        CheckIfGrounded();
-    }
-
-    private void CheckIfGrounded() {
-        RaycastHit left, right;
-        float leftOffset = col.size.x * 2f;
-        float rightOffset = col.size.x * 3f;
-
-        if ((Physics.Raycast(transform.position - new Vector3(leftOffset, 0f, 0f), Vector3.down, out left, detectFloorDistance, groundLayer) ||
-            Physics.Raycast(transform.position + new Vector3(rightOffset, 0f, 0f), Vector3.down, out right, detectFloorDistance, groundLayer)) &&
-            rb.linearVelocity.y <= 0f) {
-
-            Debug.DrawRay(transform.position - new Vector3(leftOffset, 0f, 0f), Vector3.down * detectFloorDistance, Color.blue);
-            Debug.DrawRay(transform.position + new Vector3(rightOffset, 0f, 0f), Vector3.down * detectFloorDistance, Color.blue);
-
-            rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
-            isGrounded = true;
-            isJumping = false;
-            jumpForce = 0f;
-            coyoteTimer = 0f;
-        }
-        else {
-            isGrounded = false;
+            jumpForce -= jumpDecay * Time.deltaTime;
+            if (jumpForce < 0f) {
+                jumpForce = 0f;
+            }
         }
     }
 
-    private void CheckForCeiling() {
-        RaycastHit left, right;
-        float leftOffset = col.size.x * 2.4f;
-        float rightOffset = col.size.x * 3f;
+    private void CheckIfBlocked() {
+        float offset = 0.4f;
 
-        Debug.DrawRay(transform.position - new Vector3(leftOffset, 0f, 0f), Vector3.up * detectCeilingDistance, Color.green);
-        Debug.DrawRay(transform.position + new Vector3(rightOffset, 0f, 0f), Vector3.up * detectCeilingDistance, Color.green);
-
-        if ((Physics.Raycast(transform.position - new Vector3(leftOffset, 0f, 0f), Vector3.up, out left, detectCeilingDistance, groundLayer) ||
-            Physics.Raycast(transform.position + new Vector3(rightOffset, 0f, 0f), Vector3.up, out right, detectCeilingDistance, groundLayer)) &&
-            rb.linearVelocity.y <= 0f) {
-
-            jumpForce = 0f;
-            rb.linearVelocity = new Vector3(rb.linearVelocity.x, -1f, rb.linearVelocity.z);
-        }
+        Debug.DrawRay(transform.position + new Vector3(offset, 0f, 0f), Vector3.forward * -3, Color.red);
+        Debug.DrawRay(transform.position - new Vector3(offset, 0f, 0f), Vector3.forward * -3, Color.red);
     }
 }
