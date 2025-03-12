@@ -1,7 +1,7 @@
 using UnityEngine;
 
 public class PlayerAudio : MonoBehaviour {
-    AudioSource audio;
+    private AudioSource audio;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start() {

@@ -22,20 +22,20 @@ AnimationClip:
     curve:
     - time: 0
       value: {fileID: 1140051617, guid: 7ec24736e51fd429ca8ebbdf9d29ae05, type: 3}
-    - time: 0.125
+    - time: 0.0625
       value: {fileID: 1450737354, guid: 7ec24736e51fd429ca8ebbdf9d29ae05, type: 3}
-    - time: 0.25
+    - time: 0.125
       value: {fileID: -362444669, guid: 7ec24736e51fd429ca8ebbdf9d29ae05, type: 3}
-    - time: 0.375
+    - time: 0.1875
       value: {fileID: -101506486, guid: 7ec24736e51fd429ca8ebbdf9d29ae05, type: 3}
-    - time: 0.5
+    - time: 0.25
       value: {fileID: -278624083, guid: 7ec24736e51fd429ca8ebbdf9d29ae05, type: 3}
     attribute: m_Sprite
     path: 
     classID: 212
     script: {fileID: 0}
     flags: 2
-  m_SampleRate: 8
+  m_SampleRate: 16
   m_WrapMode: 0
   m_Bounds:
     m_Center: {x: 0, y: 0, z: 0}
@@ -62,7 +62,7 @@ AnimationClip:
     m_AdditiveReferencePoseClip: {fileID: 0}
     m_AdditiveReferencePoseTime: 0
     m_StartTime: 0
-    m_StopTime: 0.625
+    m_StopTime: 0.3125
     m_OrientationOffsetY: 0
     m_Level: 0
     m_CycleOffset: 0
@@ -81,4 +81,18 @@ AnimationClip:
   m_EulerEditorCurves: []
   m_HasGenericRootTransform: 0
   m_HasMotionFloatCurves: 0
-  m_Events: []
+  m_Events:
+  - time: 0
+    functionName: EndTurning
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 0
+    messageOptions: 0
+  - time: 0.3125
+    functionName: EndTurning
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 0
+    messageOptions: 0

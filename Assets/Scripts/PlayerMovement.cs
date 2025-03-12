@@ -10,26 +10,39 @@ public class PlayerMovement : MonoBehaviour {
     public float speedLimit;
     public float friction;
     public float turnTimeLimit;
-    public float jumpHeight;
+    public float fullJumpHeight;
+    public float halfJumpHeight;
     public float jumpDecay;
+    public float jumpBufferTimeLimit;
+    public float halfJumpTimeLimit;
     public float coyoteTimeLimit;
 
+    public float xVel;
+    public bool canTurn;
+
     private CharacterController controller;
+    private LayerMask groundLayer;
+    private GameObject occlusion;
 
     private float fallSpeed;
-    private float xVel;
     private float turnTimer;
     private float coyoteTimer;
+    private float jumpBufferTimer;
+    private float halfJumpTimer;
     private float jumpForce;
-    private bool canTurn;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start() {
         controller = GetComponent<CharacterController>();
+        groundLayer = LayerMask.GetMask("Ground");
+        occlusion = transform.GetChild(0).gameObject;
 
         fallSpeed = 0f;
         jumpForce = 0f;
         turnTimer = 0f;
+        jumpBufferTimer = jumpBufferTimeLimit + 1f;
+        coyoteTimer = coyoteTimeLimit + 1f; ;
+        halfJumpTimer = halfJumpTimeLimit + 1f;
         canTurn = true;
     }
 
@@ -38,15 +51,18 @@ public class PlayerMovement : MonoBehaviour {
         Fall();
         Movement();
         Jump();
+        CheckForCeiling();
+        occlusion.GetComponent<OcclusionDetection>().CheckIfBlocked();
 
         controller.Move(new Vector3(xVel, fallSpeed + jumpForce, 0f) * Time.deltaTime);
     }
 
-    // Apply gravity
+    // Apply Gravity
     private void Fall() {
         if (!controller.isGrounded) {
             fallSpeed -= gravity * Time.deltaTime;
             coyoteTimer += Time.deltaTime;
+            jumpBufferTimer += Time.deltaTime;
         }
         else {
             fallSpeed = -1f;
@@ -55,7 +71,7 @@ public class PlayerMovement : MonoBehaviour {
         }
     }
 
-    // X movement
+    // X Movement
     private void Movement() {
         if (Input.GetKey(moveLeft) && !Input.GetKey(moveRight)) {
             xVel -= accelSpeed * Time.deltaTime;
@@ -77,9 +93,11 @@ public class PlayerMovement : MonoBehaviour {
             canTurn = false;
             if (xVel < 0f) {
                 xVel = speedLimit;
+                GetComponent<PlayerAnimation>().InitiateTurn();
             }
             else if (xVel > 0f) {
                 xVel = -speedLimit;
+                GetComponent<PlayerAnimation>().InitiateTurn();
             }
         }
         else {
@@ -87,6 +105,7 @@ public class PlayerMovement : MonoBehaviour {
 
             if (!canTurn && turnTimer <= turnTimeLimit) {
                 xVel = Mathf.Sign(xVel) * speedLimit;
+                GetComponent<PlayerAnimation>().InitiateTurn();
             }
             if (Mathf.Abs(xVel) <= 0.001f) {
                 xVel = 0;
@@ -104,11 +123,12 @@ public class PlayerMovement : MonoBehaviour {
         }
     }
 
-    // Jump mechanics
-    private void Jump() { 
-        if (Input.GetKeyDown(jump) && (controller.isGrounded || coyoteTimer <= coyoteTimeLimit)) {
-            jumpForce = jumpHeight;
+    // Jump Mechanics
+    private void Jump() {
+        if ((Input.GetKeyDown(jump) && (controller.isGrounded || coyoteTimer <= coyoteTimeLimit)) || (jumpBufferTimer <= jumpBufferTimeLimit && controller.isGrounded)) {
+            jumpForce = fullJumpHeight;
             coyoteTimer = coyoteTimeLimit + 1f;
+            halfJumpTimer = 0f;
         }
         if (jumpForce > 0f) {
             jumpForce -= jumpDecay * Time.deltaTime;
@@ -116,12 +136,36 @@ public class PlayerMovement : MonoBehaviour {
                 jumpForce = 0f;
             }
         }
+        if (Input.GetKeyDown(jump)) {
+            jumpBufferTimer = 0f;
+        }
+        if (Input.GetKey(jump)) {
+            halfJumpTimer += Time.deltaTime;
+        }
+        if (!Input.GetKey(jump) && halfJumpTimer <= halfJumpTimeLimit) {
+            jumpForce = halfJumpHeight;
+            halfJumpTimer = halfJumpTimeLimit + 1f;
+        }
     }
 
-    private void CheckIfBlocked() {
-        float offset = 0.4f;
+    // Ceiling Collision
+    private void CheckForCeiling() {
+        float offset = 0.2f;
+        float distance = 0.4f;
+        Debug.DrawRay(transform.position + new Vector3(offset, 0f, 0f), Vector3.up * distance, Color.red);
+        Debug.DrawRay(transform.position - new Vector3(offset, 0f, 0f), Vector3.up * distance, Color.red);
 
-        Debug.DrawRay(transform.position + new Vector3(offset, 0f, 0f), Vector3.forward * -3, Color.red);
-        Debug.DrawRay(transform.position - new Vector3(offset, 0f, 0f), Vector3.forward * -3, Color.red);
+        RaycastHit leftHit, rightHit;
+        if (Physics.Raycast(transform.position + new Vector3(offset, 0f, 0f), Vector3.up, out rightHit, distance, groundLayer) ||
+            Physics.Raycast(transform.position - new Vector3(offset, 0f, 0f), Vector3.up, out leftHit, distance, groundLayer)) {
+            jumpForce = 0f;
+        }
+    }
+
+    // Depth Position Adjustments
+    public void AdjustDepth(float depth) { 
+        controller.enabled = false;
+        transform.position = new Vector3(transform.position.x, transform.position.y, depth);
+        controller.enabled = true;
     }
 }
