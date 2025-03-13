@@ -25,6 +25,9 @@ public class GroundBehavior : MonoBehaviour {
         originalXSize = col.size.x;
         originalYSize = col.size.y;
         originalZSize = col.size.z;
+
+        visible = true;
+        active = true;
     }
 
     // Update is called once per frame
@@ -37,10 +40,10 @@ public class GroundBehavior : MonoBehaviour {
             Vector3 playerPos = player.transform.position - new Vector3(0f, player.GetComponent<Renderer>().bounds.size.y / 3f, 0f);
             Vector3 groundPos = transform.position + new Vector3(0f, render.bounds.size.y / 2f, 0f);
 
-            if (playerPos.y > groundPos.y) {
+            if (playerPos.y - 0.1f > groundPos.y && player.GetComponent<CharacterController>().velocity.y >= 0f) {
                 active = true;
             }
-            else {
+            else if (playerPos.y < groundPos.y && player.GetComponent<CharacterController>().velocity.y < 0f) {
                 active = false;
             }
         }

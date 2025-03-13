@@ -19,6 +19,7 @@ public class PlayerMovement : MonoBehaviour {
 
     public float xVel;
     public bool canTurn;
+    public bool canMove;
 
     private CharacterController controller;
     private LayerMask groundLayer;
@@ -29,7 +30,7 @@ public class PlayerMovement : MonoBehaviour {
     private float coyoteTimer;
     private float jumpBufferTimer;
     private float halfJumpTimer;
-    private float jumpForce;
+    public float jumpForce;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start() {
@@ -44,17 +45,19 @@ public class PlayerMovement : MonoBehaviour {
         coyoteTimer = coyoteTimeLimit + 1f; ;
         halfJumpTimer = halfJumpTimeLimit + 1f;
         canTurn = true;
+        canMove = true;
     }
 
     // Update is called once per frame
     void Update() {
-        Fall();
-        Movement();
-        Jump();
-        CheckForCeiling();
-        occlusion.GetComponent<OcclusionDetection>().CheckIfBlocked();
+        if (canMove) {
+            Fall();
+            Movement();
+            Jump();
+            CheckForCeiling();
 
-        controller.Move(new Vector3(xVel, fallSpeed + jumpForce, 0f) * Time.deltaTime);
+            controller.Move(new Vector3(xVel, fallSpeed + jumpForce, 0f) * Time.deltaTime);
+        }
     }
 
     // Apply Gravity
@@ -101,7 +104,9 @@ public class PlayerMovement : MonoBehaviour {
             }
         }
         else {
-            xVel *= friction * (1 - Time.deltaTime);
+            if (controller.isGrounded) {
+                xVel *= friction * (1 - Time.deltaTime);
+            }
 
             if (!canTurn && turnTimer <= turnTimeLimit) {
                 xVel = Mathf.Sign(xVel) * speedLimit;
@@ -163,9 +168,23 @@ public class PlayerMovement : MonoBehaviour {
     }
 
     // Depth Position Adjustments
-    public void AdjustDepth(float depth) { 
+    public void AdjustDepth(float depth) {
+        if (canMove) {
+            controller.enabled = false;
+            transform.position = new Vector3(transform.position.x, transform.position.y, depth);
+            controller.enabled = true;
+        }
+    }
+
+    // Disable Movement
+    public void DisableMovement() {
         controller.enabled = false;
-        transform.position = new Vector3(transform.position.x, transform.position.y, depth);
+        canMove = false;
+    }
+
+    // Enable Movement
+    public void EnableMovement() {
         controller.enabled = true;
+        canMove = true;
     }
 }

@@ -3,6 +3,8 @@ using UnityEngine;
 public class WorldRotation : MonoBehaviour {
     private KeyCode rotateLeft;
     private KeyCode rotateRight;
+    private GameObject player;
+    private GameObject playerOcclusion;
 
     public int direction;
     public float rotateSpeed;
@@ -16,6 +18,8 @@ public class WorldRotation : MonoBehaviour {
     void Start() {
         rotateLeft = KeyCode.A;
         rotateRight = KeyCode.D;
+        player = GameObject.FindGameObjectWithTag("Player");
+        playerOcclusion = player.transform.GetChild(0).gameObject;
 
         direction = 1;
         originalRotation = transform.rotation;
@@ -25,6 +29,7 @@ public class WorldRotation : MonoBehaviour {
     // Update is called once per frame
     void Update() {
         if (Input.GetKeyDown(rotateLeft) && !Input.GetKeyDown(rotateRight) && !inRotation) {
+            player.GetComponent<PlayerMovement>().DisableMovement();
             inRotation = true;
             rotateDirection = 'r';
             counter = 90f;
@@ -35,6 +40,7 @@ public class WorldRotation : MonoBehaviour {
             }
         }
         else if (Input.GetKeyDown(rotateRight) && !Input.GetKeyDown(rotateLeft) && !inRotation) {
+            player.GetComponent<PlayerMovement>().DisableMovement();
             inRotation = true;
             rotateDirection = 'l';
             counter = 90f;
@@ -56,6 +62,8 @@ public class WorldRotation : MonoBehaviour {
             }
 
             if (counter <= 0) {
+                player.GetComponent<PlayerMovement>().EnableMovement();
+                playerOcclusion.GetComponent<OcclusionDetection>().canFix = false;
                 inRotation = false;
             }
         }
